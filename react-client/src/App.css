@@ -1,33 +1,228 @@
-.app {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 40px 24px;
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f4f6f9;
+  color: #202938;
   font-family: Arial, sans-serif;
-  color: #222;
+}
+
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.dashboard-header p {
+  margin: 8px 0 0;
+  color: #737d8c;
 }
 
 .server-status {
-  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
 }
 
-.machines {
+.status-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.online {
+  color: #16864a;
+}
+
+.offline {
+  color: #c03939;
+}
+
+.status-indicator.online {
+  background: #20a464;
+}
+
+.status-indicator.offline {
+  background: #d94b4b;
+}
+
+.dashboard-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-title h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.dashboard-title span {
+  color: #737d8c;
+  font-size: 14px;
+}
+
+.widgets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-  margin-top: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  gap: 24px;
 }
 
-.machine {
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+.widget {
+  padding: 24px;
   background: #fff;
+  border: 1px solid #e5e9ef;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(30, 45, 65, 0.04);
 }
 
-.machine h3 {
-  margin-top: 0;
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.machine p {
-  margin: 10px 0;
+.widget-header h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.widget-header span {
+  font-size: 12px;
+  color: #737d8c;
+}
+
+.widget-header .status {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.widget-monitoring {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.monitor-card {
+  padding: 18px;
+  background: #f7f8fa;
+  border-radius: 8px;
+}
+
+.monitor-card h3,
+.machine-info h3 {
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
+.monitor-value {
+  margin-bottom: 14px;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  background: #e1e5eb;
+  border-radius: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.cpu-fill {
+  background: #4786d8;
+}
+
+.ram-fill {
+  background: #27a47b;
+}
+
+.memory-details {
+  margin: 12px 0 0;
+  color: #737d8c;
+  font-size: 12px;
+}
+
+.machine-info {
+  padding-top: 20px;
+  border-top: 1px solid #e8ebef;
+}
+
+.machine-info dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.machine-info dl div {
+  min-width: 0;
+}
+
+.machine-info dt {
+  margin-bottom: 6px;
+  color: #737d8c;
+  font-size: 12px;
+}
+
+.machine-info dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.empty-state {
+  padding: 48px 20px;
+  color: #737d8c;
+  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+}
+
+@media (max-width: 600px) {
+  .app {
+    padding: 24px 16px;
+  }
+
+  .dashboard-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .widget-monitoring {
+    grid-template-columns: 1fr;
+  }
 }

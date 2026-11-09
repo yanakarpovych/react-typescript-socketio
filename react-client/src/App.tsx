@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import socket from "./socket";
 import type { MachineData, PerformanceData, ConnectionStatus } from "./types";
+import Widget from "./components/Widget";
 import "./App.css";
 
 function App() {
@@ -11,12 +12,10 @@ function App() {
   useEffect(() => {
     const handleConnect = () => {
       setServerConnected(true);
-      console.log("Connected to Socket.IO server");
     };
 
     const handleDisconnect = () => {
       setServerConnected(false);
-      console.log("Disconnected from Socket.IO server");
     };
 
     const handleConnectError = (error: Error) => {
@@ -73,40 +72,38 @@ function App() {
 
   return (
     <main className="app">
-      <h1>Performance Monitor</h1>
-
-      <div className="server-status">
-        Server status:{" "}
-        <strong>{serverConnected ? "Connected" : "Disconnected"}</strong>
-      </div>
-
-      <h2>Connected machines: {machineList.length}</h2>
-
-      {machineList.length === 0 ? (
-        <p>Waiting for performance data...</p>
-      ) : (
-        <div className="machines">
-          {machineList.map((machine) => (
-            <section className="machine" key={machine.macA}>
-              <h3>{machine.cpuType}</h3>
-
-              <p>
-                Status:{" "}
-                <strong>{machine.isAlive ? "Online" : "Offline"}</strong>
-              </p>
-
-              <p>MAC address: {machine.macA}</p>
-              <p>Operating system: {machine.osType}</p>
-              <p>CPU cores: {machine.numCores}</p>
-              <p>CPU speed: {machine.cpuSpeed} MHz</p>
-              <p>CPU load: {machine.cpuLoad}%</p>
-              <p>RAM usage: {Math.round(machine.memUseage * 100)}%</p>
-              <p>Used RAM: {(machine.usedMem / 1024 ** 3).toFixed(2)} GB</p>
-              <p>Total RAM: {(machine.totalMem / 1024 ** 3).toFixed(2)} GB</p>
-            </section>
-          ))}
+      <header className="dashboard-header">
+        <div>
+          <h1>Performance Monitor</h1>
+          <p>Real-time system monitoring</p>
         </div>
-      )}
+
+        <div className="server-status">
+          <span
+            className={`status-indicator ${
+              serverConnected ? "online" : "offline"
+            }`}
+          />
+          Server: {serverConnected ? "Connected" : "Disconnected"}
+        </div>
+      </header>
+
+      <section className="dashboard">
+        <div className="dashboard-title">
+          <h2>Machines</h2>
+          <span>{machineList.length} connected machines</span>
+        </div>
+
+        {machineList.length === 0 ? (
+          <p className="empty-state">Waiting for performance data...</p>
+        ) : (
+          <div className="widgets-grid">
+            {machineList.map((machine) => (
+              <Widget key={machine.macA} machine={machine} />
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
