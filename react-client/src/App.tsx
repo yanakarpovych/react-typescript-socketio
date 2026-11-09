@@ -1,122 +1,114 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import socket from "./socket";
+import type { MachineData, PerformanceData, ConnectionStatus } from "./types";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [machines, setMachines] = useState<Record<string, MachineData>>({});
+
+  const [serverConnected, setServerConnected] = useState(false);
+
+  useEffect(() => {
+    const handleConnect = () => {
+      setServerConnected(true);
+      console.log("Connected to Socket.IO server");
+    };
+
+    const handleDisconnect = () => {
+      setServerConnected(false);
+      console.log("Disconnected from Socket.IO server");
+    };
+
+    const handleConnectError = (error: Error) => {
+      console.error("Connection error:", error.message);
+    };
+
+    const handlePerformanceData = (data: PerformanceData) => {
+      setMachines((currentMachines) => ({
+        ...currentMachines,
+        [data.macA]: {
+          ...data,
+          isAlive: true,
+        },
+      }));
+    };
+
+    const handleConnectionStatus = ({
+      machineMacA,
+      isAlive,
+    }: ConnectionStatus) => {
+      setMachines((currentMachines) => {
+        const machine = currentMachines[machineMacA];
+
+        if (!machine) {
+          return currentMachines;
+        }
+
+        return {
+          ...currentMachines,
+          [machineMacA]: {
+            ...machine,
+            isAlive,
+          },
+        };
+      });
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("perfData", handlePerformanceData);
+    socket.on("connectedOrNot", handleConnectionStatus);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("perfData", handlePerformanceData);
+      socket.off("connectedOrNot", handleConnectionStatus);
+    };
+  }, []);
+
+  const machineList = Object.values(machines);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <main className="app">
+      <h1>Performance Monitor</h1>
 
-      <div className="ticks"></div>
+      <div className="server-status">
+        Server status:{" "}
+        <strong>{serverConnected ? "Connected" : "Disconnected"}</strong>
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <h2>Connected machines: {machineList.length}</h2>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {machineList.length === 0 ? (
+        <p>Waiting for performance data...</p>
+      ) : (
+        <div className="machines">
+          {machineList.map((machine) => (
+            <section className="machine" key={machine.macA}>
+              <h3>{machine.cpuType}</h3>
+
+              <p>
+                Status:{" "}
+                <strong>{machine.isAlive ? "Online" : "Offline"}</strong>
+              </p>
+
+              <p>MAC address: {machine.macA}</p>
+              <p>Operating system: {machine.osType}</p>
+              <p>CPU cores: {machine.numCores}</p>
+              <p>CPU speed: {machine.cpuSpeed} MHz</p>
+              <p>CPU load: {machine.cpuLoad}%</p>
+              <p>RAM usage: {Math.round(machine.memUseage * 100)}%</p>
+              <p>Used RAM: {(machine.usedMem / 1024 ** 3).toFixed(2)} GB</p>
+              <p>Total RAM: {(machine.totalMem / 1024 ** 3).toFixed(2)} GB</p>
+            </section>
+          ))}
+        </div>
+      )}
+    </main>
+  );
 }
 
-export default App
+export default App;
