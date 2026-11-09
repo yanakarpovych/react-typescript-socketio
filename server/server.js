@@ -1,47 +1,43 @@
 const http = require("http");
 const { Server } = require("socket.io");
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const CLIENT_TOKENS = {
-  nodeClient: "239rfaiskdfvq243EGa4q3wefsdad",
-  reactClient: "23jrtiheriufyqwidsf",
+  nodeClient: process.env.NODE_CLIENT_TOKEN || "239rfaiskdfvq243EGa4q3wefsdad",
+  reactClient: process.env.REACT_CLIENT_TOKEN || "23jrtiheriufyqwidsf",
 };
 
-const httpServer = http.createServer((req, res) => {
-  if (req.url === "/health" && req.method === "GET") {
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-    });
+const REACT_CLIENT_URL =
+  process.env.REACT_CLIENT_URL || "http://localhost:5173";
 
-    res.end(
-      JSON.stringify({
-        status: "Server is running",
-      }),
-    );
-
+const server = http.createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "Server is running" }));
     return;
   }
 
   res.writeHead(404);
-  res.end("Not Found");
+  res.end();
 });
 
-const io = new Server(httpServer, {
+const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: REACT_CLIENT_URL,
+    methods: ["GET", "POST"],
   },
 });
 
 io.use((socket, next) => {
-  const token = socket.handshake.auth?.token;
+  const token = socket.handshake.auth.token;
 
   const clientType = Object.keys(CLIENT_TOKENS).find(
     (type) => CLIENT_TOKENS[type] === token,
   );
 
   if (!clientType) {
-    return next(new Error("Unauthorized connection"));
+    return next(new Error("Authentication error"));
   }
 
   socket.data.clientType = clientType;
@@ -51,48 +47,45 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   const clientType = socket.data.clientType;
 
-  let machineMacA;
-
   socket.join(clientType);
 
-  console.log(`${clientType} connected: ${socket.id}`);
+  console.log(`${clientType} connected`);
 
-  socket.emit("welcome", "Welcome to the performance monitoring server!");
-
-  socket.on("perfData", (data) => {
-    if (clientType !== "nodeClient") {
-      return;
-    }
-
-    if (!data || typeof data !== "object" || !data.macA) {
-      console.error("Invalid performance data received");
-      return;
-    }
-
-    machineMacA = data.macA;
-
-    console.log("Received performance data:", machineMacA);
-
-    io.to("reactClient").emit("connectedOrNot", {
-      machineMacA,
-      isAlive: true,
-    });
-
-    io.to("reactClient").emit("perfData", data);
+  socket.emit("welcome", {
+    message: `Welcome, ${clientType}`,
   });
 
-  socket.on("disconnect", () => {
-    console.log(`${clientType} disconnected: ${socket.id}`);
+  if (clientType === "nodeClient") {
+    let machineMacA = null;
 
-    if (clientType === "nodeClient" && machineMacA) {
+    socket.on("perfData", (data) => {
+      if (!data || !data.macA) {
+        return;
+      }
+
+      machineMacA = data.macA;
+
       io.to("reactClient").emit("connectedOrNot", {
         machineMacA,
-        isAlive: false,
+        isAlive: true,
       });
-    }
-  });
+
+      io.to("reactClient").emit("perfData", data);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("nodeClient disconnected");
+
+      if (machineMacA) {
+        io.to("reactClient").emit("connectedOrNot", {
+          machineMacA,
+          isAlive: false,
+        });
+      }
+    });
+  }
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
