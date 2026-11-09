@@ -1,8 +1,26 @@
+const os = require("os");
+const { io } = require("socket.io-client");
 
+const SERVER_URL = "http://localhost:3000";
+const CLIENT_TOKEN = "239rfaiskdfvq243EGa4q3wefsdad";
+const UPDATE_INTERVAL = 1000;
 
-const os = require('os');
+const getMacAddress = () => {
+  const interfaces = os.networkInterfaces();
 
-// Calculate average CPU time across all logical cores
+  for (const networkInterface of Object.values(interfaces)) {
+    const activeInterface = networkInterface?.find(
+      (item) => !item.internal && item.mac && item.mac !== "00:00:00:00:00:00",
+    );
+
+    if (activeInterface) {
+      return activeInterface.mac;
+    }
+  }
+
+  throw new Error("Unable to find a valid MAC address");
+};
+
 const cpuAverage = () => {
   const cpus = os.cpus();
 
@@ -23,7 +41,6 @@ const cpuAverage = () => {
   };
 };
 
-// Calculate current CPU usage over a 100ms interval
 const getCpuLoad = () =>
   new Promise((resolve) => {
     const start = cpuAverage();
@@ -45,7 +62,6 @@ const getCpuLoad = () =>
     }, 100);
   });
 
-// Collect system performance data
 const performanceLoadData = async () => {
   const cpus = os.cpus();
 
@@ -55,7 +71,7 @@ const performanceLoadData = async () => {
 
   const memUseage = Math.floor((usedMem / totalMem) * 100) / 100;
 
-  const osType = os.type() === 'Darwin' ? 'Mac' : os.type();
+  const osType = os.type() === "Darwin" ? "Mac" : os.type();
   const upTime = os.uptime();
 
   const cpuType = cpus[0].model;
@@ -65,6 +81,7 @@ const performanceLoadData = async () => {
   const cpuLoad = await getCpuLoad();
 
   return {
+    macA: getMacAddress(),
     freeMem,
     totalMem,
     usedMem,
@@ -78,16 +95,56 @@ const performanceLoadData = async () => {
   };
 };
 
-// Run the client and display collected data
-const run = async () => {
+const socket = io(SERVER_URL, {
+  auth: {
+    token: CLIENT_TOKEN,
+  },
+  reconnection: true,
+});
+
+let updateInterval;
+let isSending = false;
+
+const sendPerformanceData = async () => {
+  if (isSending || !socket.connected) {
+    return;
+  }
+
+  isSending = true;
+
   try {
     const data = await performanceLoadData();
 
-    console.log('System Performance Data:');
-    console.log(JSON.stringify(data, null, 2));
+    socket.emit("perfData", data);
+
+    console.log(
+      `Performance data sent. CPU: ${data.cpuLoad}% | RAM: ${Math.round(data.memUseage * 100)}%`,
+    );
   } catch (error) {
-    console.error('Failed to collect system performance data:', error);
+    console.error("Failed to collect performance data:", error);
+  } finally {
+    isSending = false;
   }
 };
 
-run();
+socket.on("connect", () => {
+  console.log(`Connected to server: ${socket.id}`);
+
+  sendPerformanceData();
+
+  updateInterval = setInterval(sendPerformanceData, UPDATE_INTERVAL);
+});
+
+socket.on("welcome", (message) => {
+  console.log(message);
+});
+
+socket.on("connect_error", (error) => {
+  console.error("Connection error:", error.message);
+});
+
+socket.on("disconnect", (reason) => {
+  console.log(`Disconnected from server: ${reason}`);
+
+  clearInterval(updateInterval);
+});
